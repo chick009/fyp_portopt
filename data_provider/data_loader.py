@@ -95,20 +95,22 @@ class DataPreprocessing():
         stacked_test_data_list = []
         stacked_test_label_list = []
 
-        for df in df_list:
+        for count, df in enumerate(df_list):
             train_data, test_data, train_label, test_label = self.train_test_split(df, seq_len, forecast_len, split_date)
 
             # Stack the tensors along the 0th dimension
             stacked_train_data = np.stack(train_data, axis=0)
             stacked_train_label = np.stack(train_label, axis=0)
-            stacked_test_data = np.stack(test_data, axis=0)
-            stacked_test_label = np.stack(test_label, axis=0)
+            if count == 0:
+                stacked_test_data = np.stack(test_data, axis=0)
+                stacked_test_label = np.stack(test_label, axis=0)
 
             # Append the stacked tensors to the respective lists
             stacked_train_data_list.append(stacked_train_data)
             stacked_train_label_list.append(stacked_train_label)
-            stacked_test_data_list.append(stacked_test_data)
-            stacked_test_label_list.append(stacked_test_label)
+            if count == 0:
+                stacked_test_data_list.append(stacked_test_data)
+                stacked_test_label_list.append(stacked_test_label)
 
         # Concatenate the stacked tensors into a single tensor
         stacked_train_data = np.concatenate(stacked_train_data_list, axis=0)

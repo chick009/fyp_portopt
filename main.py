@@ -14,14 +14,14 @@ df.index = pd.to_datetime(df.index)
 # set the sequence length & forecast length & number of stocks
 sequence_length = 30
 forecast_length = 10
-nb_degree = 1
+nb_degree = 0
 
-train_data, train_label, test_data, test_label = data.run(df, 30, 10, pd.to_datetime('2020-01-01'))
+train_data, train_label, test_data, test_label = data.run(df, 30, 30, pd.to_datetime('2020-01-01'))
 
 device = 'cuda:0'
 # Convert and move train_data, test_data, train_label, and test_label to the CUDA device
 train_data, train_label, test_data, test_label = torch.from_numpy(train_data).to(device), torch.from_numpy(train_label).to(device), torch.from_numpy(test_data).to(device), torch.from_numpy(test_label).to(device)
-
+print(test_data.shape)
 # print(train_data.shape, train_label.shape)
 batch_aug = BatchAugmentation()
 
