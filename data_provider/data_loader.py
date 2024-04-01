@@ -5,19 +5,10 @@ import joblib
 
 from sklearn.preprocessing import MinMaxScaler
 
-def download_stock_data(tickers, start_date, end_date):
-    
-    data = yf.download(tickers, start=start_date, end=end_date, interval='1d')['Adj Close']
-
-    df = pd.DataFrame(data)
-    
-    return df.resample('D').last()
-
-
 
 class DataPreprocessing():
 
-    def __init__(self, type, add_returns):
+    def __init__(self, type, add_returns = False):
         self.type = type 
         self.add_returns = True
 
@@ -51,7 +42,7 @@ class DataPreprocessing():
         
         return df_list
 
-
+    @staticmethod
     def train_test_split(df, seq_len, forecast_len, split_date):
         train_data, test_data, train_label, test_label = [], [], [], []
         
@@ -98,23 +89,32 @@ class DataPreprocessing():
         # Downsample the dataset
         df_list = self.downsample_list(df, interval_lst = ['1D', '3D', '1W'])
         
-        # Choose the correct conversion function
+        # Initialize lists to store stacked tensors
         stacked_train_data_list = []
         stacked_train_label_list = []
         stacked_test_data_list = []
         stacked_test_label_list = []
-        
+
         for df in df_list:
             train_data, test_data, train_label, test_label = self.train_test_split(df, seq_len, forecast_len, split_date)
-            
-            stacked_train_data_list.append(np.vstack(train_data))
-            stacked_train_label_list.append(np.vstack(train_label))
-            stacked_test_data_list.append(np.vstack(test_data))
-            stacked_test_label_list.append(np.vstack(test_label))
-        
-        stacked_train_data = np.vstack(stacked_train_data_list)
-        stacked_train_label = np.vstack(stacked_train_label_list)
-        stacked_test_data = np.vstack(stacked_test_data_list)
-        stacked_test_label = np.vstack(stacked_test_label_list)
+
+            # Stack the tensors along the 0th dimension
+            stacked_train_data = np.stack(train_data, axis=0)
+            stacked_train_label = np.stack(train_label, axis=0)
+            stacked_test_data = np.stack(test_data, axis=0)
+            stacked_test_label = np.stack(test_label, axis=0)
+
+            # Append the stacked tensors to the respective lists
+            stacked_train_data_list.append(stacked_train_data)
+            stacked_train_label_list.append(stacked_train_label)
+            stacked_test_data_list.append(stacked_test_data)
+            stacked_test_label_list.append(stacked_test_label)
+
+        # Concatenate the stacked tensors into a single tensor
+        stacked_train_data = np.concatenate(stacked_train_data_list, axis=0)
+        stacked_train_label = np.concatenate(stacked_train_label_list, axis=0)
+        stacked_test_data = np.concatenate(stacked_test_data_list, axis=0)
+        stacked_test_label = np.concatenate(stacked_test_label_list, axis=0)
+
         
         return stacked_train_data, stacked_train_label, stacked_test_data, stacked_test_label
