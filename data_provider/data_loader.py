@@ -8,9 +8,10 @@ from sklearn.preprocessing import MinMaxScaler
 
 class DataPreprocessing():
 
-    def __init__(self, type, add_returns = False):
+    def __init__(self, type, add_returns = True, downsample = True):
         self.type = type 
-        self.add_returns = True
+        self.add_returns = add_returns
+        self.down_sample = downsample
 
     def append_return_columns(self, df):
         # Get the return dataframe by performing percentage change.
@@ -43,11 +44,12 @@ class DataPreprocessing():
         return df_list
 
     @staticmethod
-    def train_test_split(df, seq_len, forecast_len, split_date):
+    def train_test_split(df, seq_len, forecast_len, start_date, end_date):
         train_data, test_data, train_label, test_label = [], [], [], []
         
         # Convert split_date to a datetime object
-        split_date = pd.Timestamp(split_date, tz='UTC')
+        start_date = pd.Timestamp(start_date, tz='UTC')
+        end_date = pd.Timestamp(end_date, tz='UTC')
         
         for i in range(len(df) - seq_len - forecast_len - 1):
             
@@ -55,24 +57,23 @@ class DataPreprocessing():
             time = df.iloc[i + seq_len].name
             
             # Compare the timestamp with the split_date
-            if time < split_date:
-                # Append data and label to train sets
-                train_data.append(df.iloc[i: i + seq_len].values)
-                train_label.append(df.iloc[i + seq_len: i + seq_len + forecast_len].values)
-            else:
+            if time > end_date:
+                break
+            elif start_date <= time <= end_date:
                 # Append data and label to test sets
                 test_data.append(df.iloc[i: i + seq_len].values)
                 test_label.append(df.iloc[i + seq_len: i + seq_len + forecast_len].values)
+            else:
+                # Append data and label to test sets
+                train_data.append(df.iloc[i: i + seq_len].values)
+                train_label.append(df.iloc[i + seq_len: i + seq_len + forecast_len].values)
         
         # Convert lists to numpy arrays
-        train_data = np.array(train_data)
-        test_data = np.array(test_data)
-        train_label = np.array(train_label)
-        test_label = np.array(test_label)
-        
+        train_data, test_data, train_label, test_label = np.array(train_data), np.array(test_data), np.array(train_label), np.array(test_label) 
+    
         return train_data, test_data, train_label, test_label
     
-    def run(self, df, seq_len, forecast_len, split_date):
+    def run(self, df, seq_len, forecast_len, start_date, end_date):
         """
         Stack arrays from multiple dataframes obtained from train_test_split function.
         
@@ -87,8 +88,11 @@ class DataPreprocessing():
         """
 
         # Downsample the dataset
-        df_list = self.downsample_list(df, interval_lst = ['1D', '3D', '1W'])
-        
+        if self.down_sample:
+            df_list = self.downsample_list(df, interval_lst = ['1D', '3D', '1W'])
+        else:
+            df_list = self.downsample_list(df, interval_lst = ['1D'])
+
         # Initialize lists to store stacked tensors
         stacked_train_data_list = []
         stacked_train_label_list = []
@@ -96,11 +100,14 @@ class DataPreprocessing():
         stacked_test_label_list = []
 
         for count, df in enumerate(df_list):
-            train_data, test_data, train_label, test_label = self.train_test_split(df, seq_len, forecast_len, split_date)
+            train_data, test_data, train_label, test_label = self.train_test_split(df, seq_len, forecast_len, start_date, end_date)
 
+            print("train_data", train_data.shape)
+            print('test_label', test_label.shape)
             # Stack the tensors along the 0th dimension
             stacked_train_data = np.stack(train_data, axis=0)
             stacked_train_label = np.stack(train_label, axis=0)
+
             if count == 0:
                 stacked_test_data = np.stack(test_data, axis=0)
                 stacked_test_label = np.stack(test_label, axis=0)
@@ -119,4 +126,4 @@ class DataPreprocessing():
         stacked_test_label = np.concatenate(stacked_test_label_list, axis=0)
 
         
-        return stacked_train_data, stacked_train_label, stacked_test_data, stacked_test_label
+        return stacked_train_data, stacked_test_data, stacked_train_label, stacked_test_label

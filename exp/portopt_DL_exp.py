@@ -2,15 +2,20 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from models.portopt_DL import PortOpt_DL
+from models.portopt_DL import PortOpt_DL, PortOpt_DL_DeepSig, PortOpt_DL_DeepSig_LSTM
 
 class Exp_portopt_DL():
-    def __init__(self, nb_stocks, input_shape):
+    def __init__(self, nb_stocks, nb_sequence):
         super(Exp_portopt_DL, self).__init__() 
         self.nb_stocks = nb_stocks
-        self.input_shape = input_shape
+        self.nb_sequence = nb_sequence
+        self.model_dict = {
+            "PortOpt_DL": PortOpt_DL, 
+            "PortOpt_DL_DeepSig": PortOpt_DL_DeepSig,
+            "PortOpt_DL_DeepSig_LSTM": PortOpt_DL_DeepSig_LSTM
+        }
 
-    def train(self, train_loader):
+    def train(self, train_loader, model_name):
         # Assuming we have a training labels of (batch x forecasting period x features)
         # We would like to extract the last 4 features which would be the return of each stock [:, :, -4:]
         # Then I would calculate the portfolio return by multiplying the weight (batch x 4) with (batch x forecast x feature)
@@ -24,10 +29,11 @@ class Exp_portopt_DL():
         # # Create data loaders
         # train_dataset = TensorDataset(torch.tensor(X_train), torch.tensor(y_train))
         # train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+        nb_sequence, nb_stocks = self.nb_sequence, self.nb_stocks
 
-        input_shape, nb_stocks = self.input_shape, self.nb_stocks
+        Model = self.model_dict[model_name]
         # Create the PortOpt_DL model
-        model = PortOpt_DL(input_shape, nb_stocks).to('cuda:0')
+        model = Model(nb_sequence = nb_sequence, nb_stocks = nb_stocks).to('cuda:0')
 
         optimizer = optim.Adam(model.parameters())
 
@@ -98,8 +104,11 @@ class Exp_portopt_DL():
 
             # Calculate the average Sharpe ratio
             average_sharpe_ratio = total_sharpe_ratio / num_samples
+            
+            # Print the average sharpe ratio
             print(average_sharpe_ratio)
 
             return average_sharpe_ratio
+    
     def predict(self):
         pass
