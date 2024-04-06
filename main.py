@@ -13,8 +13,8 @@ df = pd.read_csv('./demo_close.csv', index_col = 0)
 df.index = pd.to_datetime(df.index)
 
 # set the sequence length & forecast length & number of stocks
-sequence_length = 50
-forecast_length = 62
+sequence_length = 200
+forecast_length = 252
 nb_stocks = 4
 nb_degree = 0
 
@@ -72,9 +72,8 @@ test_loader = DataLoader(test_dataset, batch_size = 1, shuffle = False)
 
 # sharpe_ratio_list = []
 
-model_type = "PortOpt_DL" # "PortOpt_DL_DeepSig", # PortOpt_DL_DeepSig_LSTM
+model_type = "PortOpt_DL_DeepSig_LSTM" # "PortOpt_DL_DeepSig", # PortOpt_DL_DeepSig_LSTM
 
 exp = Exp_portopt_DL(nb_stocks, sequence_length)
 model = exp.train(train_loader, model_type)
 sharpe_ratio = exp.test(model, test_loader)
-# sharpe_ratio_list.append(sharpe_ratio)
