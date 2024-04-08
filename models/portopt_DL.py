@@ -4,9 +4,10 @@ import torch.nn.functional as F
 import signatory
 
 class PortOpt_DL(nn.Module):
-    def __init__(self, nb_sequence, nb_stocks, hidden_units = 64):
+    def __init__(self, nb_sequence, nb_stocks, hidden_units = 64, in_channels = 8):
         super(PortOpt_DL, self).__init__()
 
+        self.in_channels = in_channels
         self.nb_stocks = nb_stocks 
 
         self.batchnorm = nn.BatchNorm1d(int(nb_sequence))
@@ -168,4 +169,5 @@ class PortOpt_DL_DeepSig_LSTM(nn.Module):
 
         # Softmax the output
         out = F.softmax(out, dim=1)
+        
         return out

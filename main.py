@@ -9,6 +9,7 @@ from exp.portopt_DL_exp import Exp_portopt_DL
 from torch.utils.data import DataLoader, TensorDataset
 
 
+
 df = pd.read_csv('./demo_close.csv', index_col = 0)
 df.index = pd.to_datetime(df.index)
 
@@ -19,8 +20,8 @@ nb_stocks = 4
 nb_degree = 0
 
 # Test start_date, and end_date
-start_date = '2021-01-01'
-end_date = '2021-12-31'
+start_date = '2020-01-01'
+end_date = '2020-12-31'
 
 # Select device for training 
 device = 'cuda:0'
@@ -65,6 +66,10 @@ del train_append_label_all
 train_dataset = TensorDataset(train_data, train_label)
 test_dataset = TensorDataset(test_data, test_label)
 
+del train_data
+del train_label
+del test_data
+del test_label
 # Create DataLoader for train and test data
 batch_size = 64
 train_loader = DataLoader(train_dataset, batch_size = batch_size, shuffle = False)
@@ -74,6 +79,15 @@ test_loader = DataLoader(test_dataset, batch_size = 1, shuffle = False)
 
 model_type = "PortOpt_DL_DeepSig_LSTM" # "PortOpt_DL_DeepSig", # PortOpt_DL_DeepSig_LSTM
 
-exp = Exp_portopt_DL(nb_stocks, sequence_length)
-model = exp.train(train_loader, model_type)
-sharpe_ratio = exp.test(model, test_loader)
+# "PortOpt_DL",
+model_type_list = ["PortOpt_DL"]# , "PortOpt_DL_DeepSig"]# , "PortOpt_DL_DeepSig_LSTM"]
+
+for model_type in model_type_list:
+    exp = Exp_portopt_DL(nb_stocks, sequence_length)
+    model = exp.train(train_loader, model_type)
+    print(model_type)
+    # sharpe_ratio = exp.test(model, test_loader)
+    sharpe_ratio_2 = exp.predict(model, test_loader)
+    del model
+
+
