@@ -54,7 +54,7 @@ class DataPreprocessing():
         for i in range(len(df) - seq_len - forecast_len - 1):
             
             # Get the timestamp for the start of forecast
-            time = df.iloc[i + seq_len].name
+            time = df.iloc[i + seq_len + forecast_len - 1].name
             
             # Compare the timestamp with the split_date
             if time > end_date:
@@ -115,6 +115,8 @@ class DataPreprocessing():
             # Append the stacked tensors to the respective lists
             stacked_train_data_list.append(stacked_train_data)
             stacked_train_label_list.append(stacked_train_label)
+            
+            
             if count == 0:
                 stacked_test_data_list.append(stacked_test_data)
                 stacked_test_label_list.append(stacked_test_label)

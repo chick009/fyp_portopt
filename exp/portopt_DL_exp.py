@@ -31,7 +31,6 @@ class Exp_portopt_DL():
         # train_dataset = TensorDataset(torch.tensor(X_train), torch.tensor(y_train))
         # train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
         nb_sequence, nb_stocks = self.nb_sequence, self.nb_stocks
-
         Model = self.model_dict[model_name]
         # Create the PortOpt_DL model
         model = Model(nb_sequence = nb_sequence, nb_stocks = nb_stocks, in_channels = nb_stocks * 2).to('cuda:0')
@@ -52,11 +51,10 @@ class Exp_portopt_DL():
                 returns = labels[:, :, nb_stocks:]
            
                 # Calculate portfolio returns
-                portfolio_returns = torch.sum(outputs.unsqueeze(1) * returns, dim=1)
-                
+                portfolio_returns = torch.sum(outputs.unsqueeze(1) * returns, dim = 2)
+                # print(portfolio_returns)
                 # Calculate mean and standard deviation of portfolio returns
                 mean_returns = torch.mean(portfolio_returns, dim=1)
-                
                 std_returns = torch.std(portfolio_returns, dim=1)
                 
                 # Calculate Sharpe ratio
@@ -121,8 +119,11 @@ class Exp_portopt_DL():
         total_sharpe_ratio = 0
         num_samples = 0
 
+        nb_test_loader = len(test_loader)
         with torch.no_grad(): # Disable gradient computation during evaluation
-            for inputs, labels in test_loader:
+            for idx, (inputs, labels) in enumerate(test_loader):
+                if idx != nb_test_loader - 1:
+                    continue
                 inputs = inputs.to(device) # Move inputs to the correct device
                 labels = labels.to(device) # Move labels to the correct device
 
@@ -143,8 +144,6 @@ class Exp_portopt_DL():
                 std_returns = torch.std(portfolio_returns, dim=1)
                 # print(mean_returns)
                 # print(std_returns)
-                print(torch.cumprod(1 + portfolio_returns, dim=0))
-                print(std_returns)
                 # Calculate Sharpe ratio
                 sharpe_ratio = mean_returns / std_returns
 
@@ -159,4 +158,4 @@ class Exp_portopt_DL():
             # Print the average sharpe ratio
             print(average_sharpe_ratio)
 
-            return average_sharpe_ratio
+            return outputs

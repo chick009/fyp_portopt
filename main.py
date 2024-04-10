@@ -11,17 +11,20 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 df = pd.read_csv('./demo_close.csv', index_col = 0)
+
+df = df.loc['2011-01-01':] # so for 10 years
+pct_df = df.pct_change().dropna()
 df.index = pd.to_datetime(df.index)
 
 # set the sequence length & forecast length & number of stocks
 sequence_length = 200
 forecast_length = 252
 nb_stocks = 4
-nb_degree = 0
+nb_degree = 1
 
 # Test start_date, and end_date
-start_date = '2020-01-01'
-end_date = '2020-12-31'
+start_date = '2021-01-01'
+end_date = '2021-12-31'
 
 # Select device for training 
 device = 'cuda:0'
@@ -82,12 +85,37 @@ model_type = "PortOpt_DL_DeepSig_LSTM" # "PortOpt_DL_DeepSig", # PortOpt_DL_Deep
 # "PortOpt_DL",
 model_type_list = ["PortOpt_DL"]# , "PortOpt_DL_DeepSig"]# , "PortOpt_DL_DeepSig_LSTM"]
 
+# Set the float_format to display decimal numbers
+pd.set_option('display.float_format', '{:.4f}'.format)
+
 for model_type in model_type_list:
-    exp = Exp_portopt_DL(nb_stocks, sequence_length)
-    model = exp.train(train_loader, model_type)
-    print(model_type)
-    # sharpe_ratio = exp.test(model, test_loader)
-    sharpe_ratio_2 = exp.predict(model, test_loader)
-    del model
+    average_sharpe = []
+    print("---------------- Model Type -------------------")
+    for i in range(3):
+        exp = Exp_portopt_DL(nb_stocks, sequence_length)
+        model = exp.train(train_loader, model_type)
+
+        
+        weights = exp.predict(model, test_loader).detach().cpu().numpy()
+
+        print("Weights of the Portfolio is:", weights)
+        stocks_returns = pct_df.loc[start_date:end_date].values
+
+        # Multiply stock returns by weights
+        portfolio_returns = stocks_returns * weights
+
+        portfolio_returns = np.sum(portfolio_returns, axis = 1)
+    
+        cumulative_return = np.prod(1 + portfolio_returns) - 1
+
+        years = len(portfolio_returns)
+        annual_return = cumulative_return
+        annual_std = portfolio_returns.std() * np.sqrt(years)
+        annualized_sharpe_ratio = annual_return / annual_std
+        
+        print("Annualized Sharpe Ratio is:", annualized_sharpe_ratio)
+        average_sharpe.append(annualized_sharpe_ratio)
+        del model
+    print("average sharpe", np.mean(average_sharpe))
 
 

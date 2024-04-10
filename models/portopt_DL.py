@@ -20,7 +20,7 @@ class PortOpt_DL(nn.Module):
 
         # Perform batch normalization for the data
         x = self.batchnorm(x)
-
+    
         # Calculate the LSTM layers
         lstm_out, _ = self.lstm(x)
 
