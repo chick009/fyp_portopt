@@ -8,30 +8,34 @@ from data_provider.augmentation import BatchAugmentation
 from exp.portopt_DL_exp import Exp_portopt_DL
 from torch.utils.data import DataLoader, TensorDataset
 
-
-
+# -------------------------------------- Config [Start] ------------------------- #
+# Get the data in a csv format, and select the required interval
 df = pd.read_csv('./demo_close.csv', index_col = 0)
-
-df = df.loc['2011-01-01':] # so for 10 years
+df = df.loc['2012-01-01':] # so for 10 years
+df.index = pd.to_datetime(df.index, utc = True)
 pct_df = df.pct_change().dropna()
-df.index = pd.to_datetime(df.index)
+
 
 # set the sequence length & forecast length & number of stocks
-sequence_length = 200
-forecast_length = 252
-nb_stocks = 4
-nb_degree = 1
+# (100, 126) -> "6M", (200, 252) -> "1Y"
+sequence_length = 100
+forecast_length = 126
+nb_stocks = 4 # Number of stocks 
+nb_degree = 0 # 1 = Augment the data once using FrAug
 
-# Test start_date, and end_date
-start_date = '2021-01-01'
-end_date = '2021-12-31'
+# Test start_date, and end_date, and whether shuffle the train data
+start_date = '2022-01-01'
+end_date = '2022-06-30'
+train_shuffle = False
 
 # Select device for training 
 device = 'cuda:0'
 
-data = DataPreprocessing('hi', add_returns=True, downsample= False)
-train_data, test_data, train_label, test_label = data.run(df, sequence_length, forecast_length, pd.to_datetime(start_date), pd.to_datetime(end_date))
+# Preprocess the data and split train/test data
+data = DataPreprocessing('hi', add_returns = True, downsample= False)
+# -------------------------------------- Config [End] ------------------------- #
 
+train_data, test_data, train_label, test_label = data.run(df, sequence_length, forecast_length, pd.to_datetime(start_date), pd.to_datetime(end_date))
 
 # Convert and move train_data, test_data, train_label, and test_label to the CUDA device
 train_data, test_data, train_label, test_label = torch.from_numpy(train_data).to(device), torch.from_numpy(test_data).to(device), torch.from_numpy(train_label).to(device), torch.from_numpy(test_label).to(device)
@@ -75,7 +79,7 @@ del test_data
 del test_label
 # Create DataLoader for train and test data
 batch_size = 64
-train_loader = DataLoader(train_dataset, batch_size = batch_size, shuffle = False)
+train_loader = DataLoader(train_dataset, batch_size = batch_size, shuffle = train_shuffle)
 test_loader = DataLoader(test_dataset, batch_size = 1, shuffle = False)
 
 # sharpe_ratio_list = []
@@ -83,39 +87,39 @@ test_loader = DataLoader(test_dataset, batch_size = 1, shuffle = False)
 model_type = "PortOpt_DL_DeepSig_LSTM" # "PortOpt_DL_DeepSig", # PortOpt_DL_DeepSig_LSTM
 
 # "PortOpt_DL",
-model_type_list = ["PortOpt_DL"]# , "PortOpt_DL_DeepSig"]# , "PortOpt_DL_DeepSig_LSTM"]
+model_type_list = ["PortOpt_DL_DeepSig", "PortOpt_DL_DeepSig_LSTM"]# , "PortOpt_DL_DeepSig"]# , "PortOpt_DL_DeepSig_LSTM"]
+
+# "PortOpt_DL", "PortOpt_DL_DeepSig",
 
 # Set the float_format to display decimal numbers
 pd.set_option('display.float_format', '{:.4f}'.format)
 
 for model_type in model_type_list:
-    average_sharpe = []
-    print("---------------- Model Type -------------------")
-    for i in range(3):
-        exp = Exp_portopt_DL(nb_stocks, sequence_length)
-        model = exp.train(train_loader, model_type)
+    print(model_type)
+    exp = Exp_portopt_DL(nb_stocks, sequence_length)
+    model = exp.train(train_loader, model_type)
 
-        
-        weights = exp.predict(model, test_loader).detach().cpu().numpy()
-
-        print("Weights of the Portfolio is:", weights)
-        stocks_returns = pct_df.loc[start_date:end_date].values
-
-        # Multiply stock returns by weights
-        portfolio_returns = stocks_returns * weights
-
-        portfolio_returns = np.sum(portfolio_returns, axis = 1)
     
-        cumulative_return = np.prod(1 + portfolio_returns) - 1
+    weights = exp.predict(model, test_loader).detach().cpu().numpy()
 
-        years = len(portfolio_returns)
-        annual_return = cumulative_return
-        annual_std = portfolio_returns.std() * np.sqrt(years)
-        annualized_sharpe_ratio = annual_return / annual_std
-        
-        print("Annualized Sharpe Ratio is:", annualized_sharpe_ratio)
-        average_sharpe.append(annualized_sharpe_ratio)
-        del model
-    print("average sharpe", np.mean(average_sharpe))
+    print("Weights of the Portfolio is:", weights)
+    stocks_returns = pct_df.loc[start_date:end_date].values
+
+    # Multiply stock returns by weights
+    portfolio_returns = stocks_returns * weights
+
+    portfolio_returns = np.sum(portfolio_returns, axis = 1)
+
+    cumulative_return = np.prod(1 + portfolio_returns) - 1
+
+    years = len(portfolio_returns)
+    annual_return = cumulative_return
+    annual_std = portfolio_returns.std() * np.sqrt(years)
+    annualized_sharpe_ratio = annual_return / annual_std
+    
+    print("Annualized Sharpe Ratio is:", annualized_sharpe_ratio)
+ 
+    del model
+
 
 

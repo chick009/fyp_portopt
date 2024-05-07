@@ -42,7 +42,7 @@ class Exp_portopt_DL():
         num_epochs = 100
 
         for epoch in range(num_epochs):
-
+            print(epoch)
             model.train()  # Set the model to training mode
             for inputs, labels in train_loader:
                 optimizer.zero_grad()
